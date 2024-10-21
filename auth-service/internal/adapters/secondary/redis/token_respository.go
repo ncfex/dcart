@@ -14,7 +14,7 @@ type repository struct {
 	pool *redis.Pool
 }
 
-func NewTokenRepository(redisURL string) ports.TokenRepository {
+func NewTokenRepository(redisURL string) (ports.TokenRepository, error) {
 	pool := &redis.Pool{
 		MaxIdle:   10,
 		MaxActive: 100,
@@ -24,7 +24,15 @@ func NewTokenRepository(redisURL string) ports.TokenRepository {
 		IdleTimeout: 240 * time.Second,
 	}
 
-	return &repository{pool: pool}
+	conn := pool.Get()
+	defer conn.Close()
+
+	_, err := conn.Do("PING")
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to Redis: %w", err)
+	}
+
+	return &repository{pool: pool}, nil
 }
 
 func (r *repository) StoreToken(userID uuid.UUID, token string) error {

@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"database/sql"
+	"fmt"
 
 	"github.com/ncfex/dcart/auth-service/internal/core/ports"
 	"github.com/ncfex/dcart/auth-service/internal/domain"
@@ -13,12 +14,18 @@ type repository struct {
 	db *sql.DB
 }
 
-func NewUserRepository(dsn string) ports.UserRepository {
+func NewUserRepository(dsn string) (ports.UserRepository, error) {
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("error initializing database: %w", err)
 	}
-	return &repository{db: db}
+
+	err = db.Ping()
+	if err != nil {
+		return nil, fmt.Errorf("error connecting to database: %w", err)
+	}
+
+	return &repository{db: db}, nil
 }
 
 func (r *repository) FindByUsername(username string) (*domain.User, error) {

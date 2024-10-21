@@ -17,8 +17,16 @@ func main() {
 	fmt.Println(cfg)
 
 	// repo
-	userRepo := postgres.NewUserRepository(cfg.PostgresURL)
-	tokenRepo := redis.NewTokenRepository(cfg.RedisURL)
+	userRepo, err := postgres.NewUserRepository(cfg.PostgresURL)
+	if err != nil {
+		log.Fatalf("Failed to initialize user repository: %v", err)
+	}
+
+	tokenRepo, err := redis.NewTokenRepository(cfg.RedisURL)
+	if err != nil {
+		log.Fatalf("Failed to initialize token repository: %v", err)
+	}
+
 	authService := services.NewAuthService(userRepo, tokenRepo)
 
 	handler := httpAdapter.NewHandler(authService)
