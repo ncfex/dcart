@@ -5,12 +5,16 @@ import (
 )
 
 type Config struct {
-	Port string
+	PostgresURL string
+	RedisURL    string
+	Port        string
 }
 
 func LoadConfig() *Config {
 	return &Config{
-		Port: getEnv("AUTH_SERVICE_PORT", "8080"),
+		PostgresURL: getEnv("POSTGRES_URL", "postgres://user:password@localhost:5432/authdb?sslmode=disable"),
+		RedisURL:    getEnv("REDIS_URL", "localhost:6379"),
+		Port:        getEnv("AUTH_SERVICE_PORT", "8080"),
 	}
 }
 
