@@ -1,6 +1,7 @@
 package redis
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -30,7 +31,7 @@ func (r *repository) StoreToken(userID uuid.UUID, token string) error {
 	conn := r.pool.Get()
 	defer conn.Close()
 
-	_, err := conn.Do("SETEX", token, 86400, userID) // ttl 24h
+	_, err := conn.Do("SETEX", token, 86400, userID.String()) // ttl 24h
 	return err
 }
 
@@ -39,7 +40,7 @@ func (r *repository) ValidateToken(token string) (uuid.UUID, error) {
 	defer conn.Close()
 
 	userIDStr, err := redis.String(conn.Do("GET", token))
-	if err == redis.ErrNil {
+	if errors.Is(err, redis.ErrNil) {
 		return uuid.UUID{}, nil // token not found
 	}
 	if err != nil {
