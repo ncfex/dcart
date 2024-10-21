@@ -12,5 +12,5 @@ type UserRepository interface {
 
 type TokenRepository interface {
 	StoreToken(userID uuid.UUID, token string) error
-	ValidateToken(token string) (int64, error)
+	ValidateToken(token string) (uuid.UUID, error)
 }
