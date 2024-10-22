@@ -14,15 +14,29 @@ import (
 
 func main() {
 	cfg := config.LoadConfig()
-	fmt.Println(cfg)
+
+	postgresURL := fmt.Sprintf(
+		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		cfg.PostgresUser,
+		cfg.PostgresPassword,
+		cfg.PostgresHost,
+		cfg.PostgresPort,
+		cfg.PostgresDB,
+	)
+
+	redisURL := fmt.Sprintf(
+		"%s:%s",
+		cfg.RedisHost,
+		cfg.RedisPort,
+	)
 
 	// repo
-	userRepo, err := postgres.NewUserRepository(cfg.PostgresURL)
+	userRepo, err := postgres.NewUserRepository(postgresURL)
 	if err != nil {
 		log.Fatalf("Failed to initialize user repository: %v", err)
 	}
 
-	tokenRepo, err := redis.NewTokenRepository(cfg.RedisURL)
+	tokenRepo, err := redis.NewTokenRepository(redisURL)
 	if err != nil {
 		log.Fatalf("Failed to initialize token repository: %v", err)
 	}
