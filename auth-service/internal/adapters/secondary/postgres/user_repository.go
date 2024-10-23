@@ -31,7 +31,7 @@ func NewUserRepository(dsn string) (ports.UserRepository, error) {
 func (r *repository) FindByUsername(username string) (*domain.User, error) {
 	var user domain.User
 	err := r.db.QueryRow("SELECT id, username, password FROM users WHERE username = $1", username).
-		Scan(&user.ID, &user.Username, &user.Password)
+		Scan(&user.ID, &user.Username, &user.PasswordHash)
 	if err != nil {
 		return nil, err
 	}
@@ -39,6 +39,6 @@ func (r *repository) FindByUsername(username string) (*domain.User, error) {
 }
 
 func (r *repository) Create(user *domain.User) error {
-	_, err := r.db.Exec("INSERT INTO users (id, username, password) VALUES (get_random_uuid(), $1, $2)", user.Username, user.Password)
+	_, err := r.db.Exec("INSERT INTO users (id, username, password) VALUES (get_random_uuid(), $1, $2)", user.Username, user.PasswordHash)
 	return err
 }

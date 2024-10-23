@@ -26,8 +26,8 @@ func (s *service) Register(username, password string) error {
 	}
 
 	user := &domain.User{
-		Username: username,
-		Password: hashPassword(password),
+		Username:     username,
+		PasswordHash: hashPassword(password),
 	}
 
 	return s.userRepo.Create(user)
@@ -35,7 +35,7 @@ func (s *service) Register(username, password string) error {
 
 func (s *service) Login(username, password string) (string, error) {
 	user, err := s.userRepo.FindByUsername(username)
-	if err != nil || !checkPassword(password, user.Password) {
+	if err != nil || !checkPassword(password, user.PasswordHash) {
 		return "", domain.ErrInvalidCredentials
 	}
 
