@@ -1,67 +1,79 @@
 package auth
 
 import (
-	"errors"
+	"context"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
+	"github.com/ncfex/dcart/auth-service/internal/core/ports"
+	"github.com/ncfex/dcart/auth-service/internal/domain"
+	"github.com/ncfex/dcart/auth-service/internal/domain/errors"
 )
 
-func MakeJWT(userID uuid.UUID, tokenSecret string, expiresIn time.Duration) (string, error) {
-	currentTime := time.Now()
-	claims := jwt.RegisteredClaims{
-		Issuer:    "dcart", // move to env etc.
-		IssuedAt:  jwt.NewNumericDate(currentTime.UTC()),
-		ExpiresAt: jwt.NewNumericDate(currentTime.Add(expiresIn)),
-		Subject:   userID.String(),
-	}
-
-	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(tokenSecret))
+type service struct {
+	userRepo        ports.UserRepository
+	tokenRepo       ports.TokenRepository
+	passwordService *PasswordService
+	jwtService      *JWTService
 }
 
-func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
-	// check issuer
-	// add more checks
-	claims := jwt.RegisteredClaims{}
-	token, err := jwt.ParseWithClaims(
-		tokenString,
-		&claims,
-		func(t *jwt.Token) (interface{}, error) { return []byte(tokenSecret), nil },
-	)
-	if err != nil {
-		return uuid.UUID{}, err
+func NewAuthService(
+	userRepo ports.UserRepository,
+	tokenRepo ports.TokenRepository,
+	passwordService *PasswordService,
+	jwtService *JWTService,
+) ports.AuthService {
+	return &service{
+		userRepo:        userRepo,
+		tokenRepo:       tokenRepo,
+		passwordService: passwordService,
+		jwtService:      jwtService,
 	}
-
-	if claims.ExpiresAt.Before(time.Now()) {
-		return uuid.UUID{}, ErrTokenExpired
-	}
-
-	userIDString, err := token.Claims.GetSubject()
-	if err != nil {
-		return uuid.UUID{}, err
-	}
-
-	userID, err := uuid.Parse(userIDString)
-	if err != nil {
-		return uuid.UUID{}, err
-	}
-	return userID, nil
 }
 
-func HashPassword(password string) (string, error) {
-	data, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+func (s *service) Register(ctx context.Context, username, password string) (*domain.User, error) {
+	if username == "" || password == "" {
+		return &domain.User{}, errors.ErrInvalidCredentials
+	}
+	if _, err := s.userRepo.FindByUsername(username); err == nil {
+		return &domain.User{}, errors.ErrInvalidCredentials
+	}
+
+	hashedPassword, err := s.passwordService.HashPassword(password)
+	if err != nil {
+		return &domain.User{}, domain.ErrUserAlreadyExists
+	}
+
+	user := &domain.User{
+		Username:     username,
+		PasswordHash: hashedPassword,
+	}
+
+	return s.userRepo.Create(user)
+}
+
+func (s *service) Login(ctx context.Context, username, password string) (string, error) {
+	if username == "" || password == "" {
+		return "", domain.ErrInvalidCredentials
+	}
+	user, err := s.userRepo.FindByUsername(username)
+	if err != nil {
+		return "", domain.ErrInvalidCredentials
+	}
+
+	err = s.passwordService.CheckPasswordHash(password, user.PasswordHash)
+	if err != nil {
+		return "", domain.ErrInvalidCredentials
+	}
+
+	// TODO - use JWT
+	token, err := s.jwtService.MakeJWT(user.ID, time.Hour*24)
 	if err != nil {
 		return "", err
 	}
-	return string(data), nil
-}
+	err = s.tokenRepo.StoreToken(user.ID, token)
+	if err != nil {
+		return "", err
+	}
 
-func CheckPasswordHash(password, hash string) error {
-	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	return token, nil
 }
-
-var (
-	ErrTokenExpired = errors.New("token expired")
-)
