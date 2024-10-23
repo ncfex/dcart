@@ -14,10 +14,10 @@ type Handler struct {
 	authService ports.AuthService
 }
 
-func NewHandler(responder response.HTTPResponder, authService ports.AuthService) *Handler {
+func NewHandler(responder response.Responder, authService ports.AuthService) *Handler {
 	return &Handler{
 		authService: authService,
-		responder:   &responder,
+		responder:   responder,
 	}
 }
 

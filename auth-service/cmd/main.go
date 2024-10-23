@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	httpAdapter "github.com/ncfex/dcart/auth-service/internal/adapters/primary/http"
+	"github.com/ncfex/dcart/auth-service/internal/adapters/primary/http/response"
 	"github.com/ncfex/dcart/auth-service/internal/adapters/secondary/postgres"
 	"github.com/ncfex/dcart/auth-service/internal/adapters/secondary/redis"
-	"github.com/ncfex/dcart/auth-service/internal/core/services"
+	"github.com/ncfex/dcart/auth-service/internal/core/services/auth"
 	"github.com/ncfex/dcart/auth-service/internal/infrastructure/config"
 )
 
@@ -44,9 +46,13 @@ func main() {
 		log.Fatalf("Failed to initialize token repository: %v", err)
 	}
 
-	authService := services.NewAuthService(userRepo, tokenRepo)
+	passwordService := auth.NewPasswordService(0)
+	jwtService := auth.NewJWTService("dcart", cfg.JwtSecret)
+	authService := auth.NewAuthService(userRepo, tokenRepo, passwordService, jwtService)
 
-	handler := httpAdapter.NewHandler(authService)
+	logger := log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
+	responder := response.NewHTTPResponder(logger)
+	handler := httpAdapter.NewHandler(responder, authService)
 
 	srv := &http.Server{
 		Addr:    ":" + cfg.Port,
