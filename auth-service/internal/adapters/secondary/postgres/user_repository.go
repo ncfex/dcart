@@ -41,17 +41,15 @@ func (r *repository) FindByUsername(username string) (*domain.User, error) {
 	return domain.NewUserFromDB(&dbUser), nil
 }
 
-func (r *repository) Create(user *domain.User) error {
-	dbUser := user.ToDB()
+func (r *repository) Create(user *domain.User) (*domain.User, error) {
 	params := database.CreateUserParams{
-		Username:     dbUser.Username,
-		PasswordHash: dbUser.PasswordHash,
+		Username:     user.Username,
+		PasswordHash: user.PasswordHash,
 	}
 
-	_, err := r.db.CreateUser(context.Background(), params)
+	dbUser, err := r.db.CreateUser(context.Background(), params)
 	if err != nil {
-		return err
+		return nil, err
 	}
-
-	return nil
+	return domain.NewUserFromDB(&dbUser), nil
 }

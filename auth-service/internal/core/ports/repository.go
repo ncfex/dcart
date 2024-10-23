@@ -7,7 +7,7 @@ import (
 
 type UserRepository interface {
 	FindByUsername(username string) (*domain.User, error)
-	Create(user *domain.User) error
+	Create(user *domain.User) (*domain.User, error)
 }
 
 type TokenRepository interface {
