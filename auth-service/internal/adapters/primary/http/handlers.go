@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/ncfex/dcart/auth-service/internal/core/ports"
+	"github.com/ncfex/dcart/auth-service/internal/domain"
 )
 
 type Handler struct {
@@ -23,42 +24,59 @@ func (h *Handler) Router() *http.ServeMux {
 }
 
 func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
-	var req struct {
+	type parameters struct {
 		Username string `json:"username"`
 		Password string `json:"password"`
 	}
+	type response struct {
+		domain.User
+	}
 
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
+	params := parameters{}
+	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid request", err)
 		return
 	}
 
-	err := h.authService.Register(r.Context(), req.Username, req.Password)
+	createdUser, err := h.authService.Register(r.Context(), params.Username, params.Password)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		respondWithError(w, http.StatusBadRequest, err.Error(), err)
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
+	respondWithJSON(w, http.StatusCreated, response{
+		User: domain.User{
+			ID:           createdUser.ID,
+			Username:     createdUser.Username,
+			PasswordHash: createdUser.PasswordHash,
+			CreatedAt:    createdUser.CreatedAt,
+			UpdatedAt:    createdUser.UpdatedAt,
+		},
+	})
 }
 
 func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
-	var req struct {
+	type parameters struct {
 		Username string `json:"username"`
 		Password string `json:"password"`
 	}
+	type response struct {
+		Token string `json:"token"`
+	}
 
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
+	params := parameters{}
+	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid request", err)
 		return
 	}
 
-	token, err := h.authService.Login(r.Context(), req.Username, req.Password)
+	token, err := h.authService.Login(r.Context(), params.Username, params.Password)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		respondWithError(w, http.StatusUnauthorized, err.Error(), err)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(token))
+	respondWithJSON(w, http.StatusOK, response{
+		Token: token,
+	})
 }
