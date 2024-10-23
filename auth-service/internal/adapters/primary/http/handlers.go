@@ -4,14 +4,14 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/ncfex/dcart/auth-service/internal/core/services"
+	"github.com/ncfex/dcart/auth-service/internal/core/ports"
 )
 
 type Handler struct {
-	authService *services.AuthService
+	authService ports.AuthService
 }
 
-func NewHandler(authService *services.AuthService) *Handler {
+func NewHandler(authService ports.AuthService) *Handler {
 	return &Handler{authService: authService}
 }
 
