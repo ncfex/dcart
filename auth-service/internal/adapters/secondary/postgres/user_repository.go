@@ -1,17 +1,19 @@
 package postgres
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 
 	"github.com/ncfex/dcart/auth-service/internal/core/ports"
 	"github.com/ncfex/dcart/auth-service/internal/domain"
+	database "github.com/ncfex/dcart/auth-service/internal/infrastructure/database/sqlc"
 
 	_ "github.com/lib/pq"
 )
 
 type repository struct {
-	db *sql.DB
+	db *database.Queries
 }
 
 func NewUserRepository(dsn string) (ports.UserRepository, error) {
@@ -25,20 +27,31 @@ func NewUserRepository(dsn string) (ports.UserRepository, error) {
 		return nil, fmt.Errorf("error connecting to database: %w", err)
 	}
 
-	return &repository{db: db}, nil
+	queries := database.New(db)
+	return &repository{
+		db: queries,
+	}, nil
 }
 
 func (r *repository) FindByUsername(username string) (*domain.User, error) {
-	var user domain.User
-	err := r.db.QueryRow("SELECT id, username, password FROM users WHERE username = $1", username).
-		Scan(&user.ID, &user.Username, &user.PasswordHash)
+	dbUser, err := r.db.GetUserByUsername(context.Background(), username)
 	if err != nil {
 		return nil, err
 	}
-	return &user, nil
+	return domain.NewUserFromDB(&dbUser), nil
 }
 
 func (r *repository) Create(user *domain.User) error {
-	_, err := r.db.Exec("INSERT INTO users (id, username, password) VALUES (get_random_uuid(), $1, $2)", user.Username, user.PasswordHash)
-	return err
+	dbUser := user.ToDB()
+	params := database.CreateUserParams{
+		Username:     dbUser.Username,
+		PasswordHash: dbUser.PasswordHash,
+	}
+
+	_, err := r.db.CreateUser(context.Background(), params)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
