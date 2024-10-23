@@ -40,7 +40,7 @@ func (s *service) Login(username, password string) (string, error) {
 	}
 
 	// TODO - use JWT
-	token := fmt.Sprintf("%d:%d", user.ID, time.Now().Unix())
+	token := fmt.Sprintf("%s:%d", user.ID.String(), time.Now().Unix())
 	err = s.tokenRepo.StoreToken(user.ID, token)
 	if err != nil {
 		return "", err
@@ -56,5 +56,5 @@ func hashPassword(password string) string {
 
 func checkPassword(inputPassword, storedPassword string) bool {
 	// TODO - use bcrypt
-	return inputPassword == storedPassword
+	return fmt.Sprintf("hashed_%s", inputPassword) == storedPassword
 }
