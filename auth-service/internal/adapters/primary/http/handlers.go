@@ -4,16 +4,21 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/ncfex/dcart/auth-service/internal/adapters/primary/http/response"
 	"github.com/ncfex/dcart/auth-service/internal/core/ports"
 	"github.com/ncfex/dcart/auth-service/internal/domain"
 )
 
 type Handler struct {
+	responder   response.Responder
 	authService ports.AuthService
 }
 
-func NewHandler(authService ports.AuthService) *Handler {
-	return &Handler{authService: authService}
+func NewHandler(responder response.HTTPResponder, authService ports.AuthService) *Handler {
+	return &Handler{
+		authService: authService,
+		responder:   &responder,
+	}
 }
 
 func (h *Handler) Router() *http.ServeMux {
@@ -34,17 +39,17 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
 
 	params := parameters{}
 	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid request", err)
+		h.responder.RespondWithError(w, http.StatusBadRequest, "Invalid request", err)
 		return
 	}
 
 	createdUser, err := h.authService.Register(r.Context(), params.Username, params.Password)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, err.Error(), err)
+		h.responder.RespondWithError(w, http.StatusBadRequest, err.Error(), err)
 		return
 	}
 
-	respondWithJSON(w, http.StatusCreated, response{
+	h.responder.RespondWithJSON(w, http.StatusCreated, response{
 		User: domain.User{
 			ID:           createdUser.ID,
 			Username:     createdUser.Username,
@@ -66,17 +71,17 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 
 	params := parameters{}
 	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid request", err)
+		h.responder.RespondWithError(w, http.StatusBadRequest, "Invalid request", err)
 		return
 	}
 
 	token, err := h.authService.Login(r.Context(), params.Username, params.Password)
 	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, err.Error(), err)
+		h.responder.RespondWithError(w, http.StatusUnauthorized, err.Error(), err)
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, response{
+	h.responder.RespondWithJSON(w, http.StatusOK, response{
 		Token: token,
 	})
 }
