@@ -2,6 +2,8 @@ package config
 
 import (
 	"os"
+
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -16,7 +18,11 @@ type Config struct {
 	Port             string
 }
 
-func LoadConfig() *Config {
+func LoadConfig() (*Config, error) {
+	err := godotenv.Load()
+	if err != nil {
+		return &Config{}, err
+	}
 	return &Config{
 		PostgresHost:     getEnv("POSTGRES_HOST", "localhost"),
 		PostgresPort:     getEnv("POSTGRES_PORT", "5432"),
@@ -26,7 +32,7 @@ func LoadConfig() *Config {
 		RedisHost:        getEnv("REDIS_HOST", "localhost"),
 		RedisPort:        getEnv("REDIS_PORT", "6379"),
 		Port:             getEnv("AUTH_SERVICE_PORT", "8080"),
-	}
+	}, nil
 }
 
 func getEnv(key, defaultValue string) string {
