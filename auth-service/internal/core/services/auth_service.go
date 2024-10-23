@@ -22,17 +22,17 @@ func NewAuthService(userRepo ports.UserRepository, tokenRepo ports.TokenReposito
 	}
 }
 
-func (s *service) Register(ctx context.Context, username, password string) error {
+func (s *service) Register(ctx context.Context, username, password string) (*domain.User, error) {
 	if username == "" || password == "" {
-		return domain.ErrInvalidCredentials
+		return &domain.User{}, domain.ErrInvalidCredentials
 	}
 	if _, err := s.userRepo.FindByUsername(username); err == nil {
-		return domain.ErrUserAlreadyExists
+		return &domain.User{}, domain.ErrUserAlreadyExists
 	}
 
 	hashedPassword, err := auth.HashPassword(password)
 	if err != nil {
-		return domain.ErrUserAlreadyExists
+		return &domain.User{}, domain.ErrUserAlreadyExists
 	}
 
 	user := &domain.User{
