@@ -1,10 +1,12 @@
 package services
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	"github.com/ncfex/dcart/auth-service/internal/core/ports"
+	"github.com/ncfex/dcart/auth-service/internal/core/services/auth"
 	"github.com/ncfex/dcart/auth-service/internal/domain"
 )
 
@@ -20,22 +22,38 @@ func NewAuthService(userRepo ports.UserRepository, tokenRepo ports.TokenReposito
 	}
 }
 
-func (s *service) Register(username, password string) error {
+func (s *service) Register(ctx context.Context, username, password string) error {
+	if username == "" || password == "" {
+		return domain.ErrInvalidCredentials
+	}
 	if _, err := s.userRepo.FindByUsername(username); err == nil {
+		return domain.ErrUserAlreadyExists
+	}
+
+	hashedPassword, err := auth.HashPassword(password)
+	if err != nil {
 		return domain.ErrUserAlreadyExists
 	}
 
 	user := &domain.User{
 		Username:     username,
-		PasswordHash: hashPassword(password),
+		PasswordHash: hashedPassword,
 	}
 
 	return s.userRepo.Create(user)
 }
 
-func (s *service) Login(username, password string) (string, error) {
+func (s *service) Login(ctx context.Context, username, password string) (string, error) {
+	if username == "" || password == "" {
+		return "", domain.ErrInvalidCredentials
+	}
 	user, err := s.userRepo.FindByUsername(username)
-	if err != nil || !checkPassword(password, user.PasswordHash) {
+	if err != nil {
+		return "", domain.ErrInvalidCredentials
+	}
+
+	err = auth.CheckPasswordHash(password, user.PasswordHash)
+	if err != nil {
 		return "", domain.ErrInvalidCredentials
 	}
 
@@ -47,14 +65,4 @@ func (s *service) Login(username, password string) (string, error) {
 	}
 
 	return token, nil
-}
-
-func hashPassword(password string) string {
-	// TODO - use bcrypt
-	return fmt.Sprintf("hashed_%s", password)
-}
-
-func checkPassword(inputPassword, storedPassword string) bool {
-	// TODO - use bcrypt
-	return fmt.Sprintf("hashed_%s", inputPassword) == storedPassword
 }
