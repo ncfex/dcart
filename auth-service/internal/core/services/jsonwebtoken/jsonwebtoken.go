@@ -6,6 +6,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/ncfex/dcart/auth-service/internal/core/ports"
 )
 
 var (
@@ -15,19 +16,19 @@ var (
 	ErrInvalidUserID = errors.New("invalid user ID")
 )
 
-type JWTService struct {
+type service struct {
 	issuer      string
 	tokenSecret string
 }
 
-func NewJWTService(issuer, tokenSecret string) *JWTService {
-	return &JWTService{
+func NewJWTService(issuer, tokenSecret string) ports.TokenManager {
+	return &service{
 		issuer:      issuer,
 		tokenSecret: tokenSecret,
 	}
 }
 
-func (s *JWTService) MakeJWT(userID uuid.UUID, expiresIn time.Duration) (string, error) {
+func (s *service) Make(userID uuid.UUID, expiresIn time.Duration) (string, error) {
 	currentTime := time.Now()
 	claims := jwt.RegisteredClaims{
 		Issuer:    s.issuer,
@@ -39,7 +40,7 @@ func (s *JWTService) MakeJWT(userID uuid.UUID, expiresIn time.Duration) (string,
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(s.tokenSecret))
 }
 
-func (s *JWTService) ValidateJWT(tokenString string) (uuid.UUID, error) {
+func (s *service) Validate(tokenString string) (uuid.UUID, error) {
 	claims := jwt.RegisteredClaims{}
 	token, err := jwt.ParseWithClaims(
 		tokenString,
