@@ -11,10 +11,10 @@ import (
 
 type Handler struct {
 	responder   response.Responder
-	authService ports.AuthService
+	authService ports.Authenticator
 }
 
-func NewHandler(responder response.Responder, authService ports.AuthService) *Handler {
+func NewHandler(responder response.Responder, authService ports.Authenticator) *Handler {
 	return &Handler{
 		authService: authService,
 		responder:   responder,

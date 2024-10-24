@@ -23,7 +23,7 @@ func NewAuthService(
 	tokenRepo ports.TokenRepository,
 	passwordService *password.PasswordService,
 	jwtService *jsonwebtoken.JWTService,
-) ports.AuthService {
+) ports.Authenticator {
 	return &service{
 		userRepo:        userRepo,
 		tokenRepo:       tokenRepo,
