@@ -36,7 +36,7 @@ func TestNewPasswordService(t *testing.T) {
 			service := password.NewPasswordService(tt.cost)
 			assert.NotNil(t, service)
 
-			hash, err := service.HashPassword("testpassword")
+			hash, err := service.Hash("testpassword")
 			assert.NoError(t, err)
 
 			cost, err := bcrypt.Cost([]byte(hash))
@@ -88,7 +88,7 @@ func TestPasswordService_HashPassword(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			service := password.NewPasswordService(tt.cost)
-			hash, err := service.HashPassword(tt.password)
+			hash, err := service.Hash(tt.password)
 
 			if tt.shouldError {
 				assert.Error(t, err)
@@ -107,7 +107,7 @@ func TestPasswordService_HashPassword(t *testing.T) {
 func TestPasswordService_CheckPasswordHash(t *testing.T) {
 	service := password.NewPasswordService(0)
 	validPassword := "password123"
-	hash, _ := service.HashPassword(validPassword)
+	hash, _ := service.Hash(validPassword)
 
 	tests := []struct {
 		name        string
@@ -149,7 +149,7 @@ func TestPasswordService_CheckPasswordHash(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := service.CheckPasswordHash(tt.password, tt.hash)
+			err := service.Compare(tt.hash, tt.password)
 			if tt.shouldError {
 				assert.Error(t, err)
 			} else {
