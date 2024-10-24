@@ -45,3 +45,116 @@ func TestNewPasswordService(t *testing.T) {
 		})
 	}
 }
+
+func TestPasswordService_HashPassword(t *testing.T) {
+	tests := []struct {
+		name        string
+		password    string
+		cost        int
+		shouldError bool
+	}{
+		{
+			name:        "valid password default cost",
+			password:    "password123",
+			cost:        0,
+			shouldError: false,
+		},
+		{
+			name:        "valid password custom cost",
+			password:    "password123",
+			cost:        12,
+			shouldError: false,
+		},
+		{
+			name:        "empty password",
+			password:    "",
+			cost:        0,
+			shouldError: true,
+		},
+		{
+			name:        "very long password",
+			password:    string(make([]byte, 72)),
+			cost:        0,
+			shouldError: false,
+		},
+		{
+			name:        "too long password",
+			password:    string(make([]byte, 73)),
+			cost:        0,
+			shouldError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			service := password.NewPasswordService(tt.cost)
+			hash, err := service.HashPassword(tt.password)
+
+			if tt.shouldError {
+				assert.Error(t, err)
+				assert.Empty(t, hash)
+			} else {
+				assert.NoError(t, err)
+				assert.NotEmpty(t, hash)
+
+				err = bcrypt.CompareHashAndPassword([]byte(hash), []byte(tt.password))
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestPasswordService_CheckPasswordHash(t *testing.T) {
+	service := password.NewPasswordService(0)
+	validPassword := "password123"
+	hash, _ := service.HashPassword(validPassword)
+
+	tests := []struct {
+		name        string
+		password    string
+		hash        string
+		shouldError bool
+	}{
+		{
+			name:        "correct password",
+			password:    validPassword,
+			hash:        hash,
+			shouldError: false,
+		},
+		{
+			name:        "incorrect password",
+			password:    "wrongpassword",
+			hash:        hash,
+			shouldError: true,
+		},
+		{
+			name:        "empty password",
+			password:    "",
+			hash:        hash,
+			shouldError: true,
+		},
+		{
+			name:        "invalid hash",
+			password:    validPassword,
+			hash:        "invalid_hash",
+			shouldError: true,
+		},
+		{
+			name:        "empty hash",
+			password:    validPassword,
+			hash:        "",
+			shouldError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := service.CheckPasswordHash(tt.password, tt.hash)
+			if tt.shouldError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}

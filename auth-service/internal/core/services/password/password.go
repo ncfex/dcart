@@ -1,7 +1,13 @@
 package password
 
 import (
+	"errors"
+
 	"golang.org/x/crypto/bcrypt"
+)
+
+var (
+	ErrEmptyPassword = errors.New("password cannot be empty")
 )
 
 type PasswordService struct {
@@ -16,6 +22,10 @@ func NewPasswordService(cost int) *PasswordService {
 }
 
 func (s *PasswordService) HashPassword(password string) (string, error) {
+	if password == "" {
+		return "", ErrEmptyPassword
+	}
+
 	data, err := bcrypt.GenerateFromPassword([]byte(password), s.cost)
 	if err != nil {
 		return "", err
@@ -24,5 +34,9 @@ func (s *PasswordService) HashPassword(password string) (string, error) {
 }
 
 func (s *PasswordService) CheckPasswordHash(password, hash string) error {
+	if password == "" {
+		return ErrEmptyPassword
+	}
+
 	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 }
