@@ -15,17 +15,17 @@ type Responder interface {
 	RespondWithJSON(w http.ResponseWriter, code int, payload interface{})
 }
 
-type HTTPResponder struct {
+type httpResponder struct {
 	logger *log.Logger
 }
 
-func NewHTTPResponder(logger *log.Logger) *HTTPResponder {
-	return &HTTPResponder{
+func NewHTTPResponder(logger *log.Logger) Responder {
+	return &httpResponder{
 		logger: logger,
 	}
 }
 
-func (r *HTTPResponder) RespondWithError(w http.ResponseWriter, code int, msg string, err error) {
+func (r *httpResponder) RespondWithError(w http.ResponseWriter, code int, msg string, err error) {
 	if err != nil {
 		r.logger.Println(err)
 	}
@@ -37,7 +37,7 @@ func (r *HTTPResponder) RespondWithError(w http.ResponseWriter, code int, msg st
 	})
 }
 
-func (r *HTTPResponder) RespondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
+func (r *httpResponder) RespondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	data, err := json.Marshal(payload)
 	if err != nil {

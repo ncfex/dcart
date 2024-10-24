@@ -9,26 +9,26 @@ import (
 	"github.com/ncfex/dcart/auth-service/internal/domain"
 )
 
-type Handler struct {
-	responder   response.Responder
-	authService ports.Authenticator
+type handler struct {
+	responder         response.Responder
+	userAuthenticator ports.UserAuthenticator
 }
 
-func NewHandler(responder response.Responder, authService ports.Authenticator) *Handler {
-	return &Handler{
-		authService: authService,
-		responder:   responder,
+func NewHandler(responder response.Responder, userAuthenticator ports.UserAuthenticator) *handler {
+	return &handler{
+		userAuthenticator: userAuthenticator,
+		responder:         responder,
 	}
 }
 
-func (h *Handler) Router() *http.ServeMux {
+func (h *handler) Router() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /register", h.register)
 	mux.HandleFunc("POST /login", h.login)
 	return mux
 }
 
-func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
+func (h *handler) register(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
 		Username string `json:"username"`
 		Password string `json:"password"`
@@ -43,7 +43,7 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	createdUser, err := h.authService.Register(r.Context(), params.Username, params.Password)
+	createdUser, err := h.userAuthenticator.Register(r.Context(), params.Username, params.Password)
 	if err != nil {
 		h.responder.RespondWithError(w, http.StatusBadRequest, err.Error(), err)
 		return
@@ -60,7 +60,7 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
+func (h *handler) login(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
 		Username string `json:"username"`
 		Password string `json:"password"`
@@ -75,7 +75,7 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := h.authService.Login(r.Context(), params.Username, params.Password)
+	token, err := h.userAuthenticator.Login(r.Context(), params.Username, params.Password)
 	if err != nil {
 		h.responder.RespondWithError(w, http.StatusUnauthorized, err.Error(), err)
 		return
