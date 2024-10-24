@@ -1,5 +1,4 @@
-// internal/core/services/auth/password.go
-package auth
+package password
 
 import (
 	"golang.org/x/crypto/bcrypt"

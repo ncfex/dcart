@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/ncfex/dcart/auth-service/internal/core/ports"
+	"github.com/ncfex/dcart/auth-service/internal/core/services/jwt"
+	"github.com/ncfex/dcart/auth-service/internal/core/services/password"
 	"github.com/ncfex/dcart/auth-service/internal/domain"
 	"github.com/ncfex/dcart/auth-service/internal/domain/errors"
 )
@@ -12,15 +14,15 @@ import (
 type service struct {
 	userRepo        ports.UserRepository
 	tokenRepo       ports.TokenRepository
-	passwordService *PasswordService
-	jwtService      *JWTService
+	passwordService *password.PasswordService
+	jwtService      *jwt.JWTService
 }
 
 func NewAuthService(
 	userRepo ports.UserRepository,
 	tokenRepo ports.TokenRepository,
-	passwordService *PasswordService,
-	jwtService *JWTService,
+	passwordService *password.PasswordService,
+	jwtService *jwt.JWTService,
 ) ports.AuthService {
 	return &service{
 		userRepo:        userRepo,

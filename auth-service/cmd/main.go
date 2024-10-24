@@ -11,6 +11,8 @@ import (
 	"github.com/ncfex/dcart/auth-service/internal/adapters/secondary/postgres"
 	"github.com/ncfex/dcart/auth-service/internal/adapters/secondary/redis"
 	"github.com/ncfex/dcart/auth-service/internal/core/services/auth"
+	"github.com/ncfex/dcart/auth-service/internal/core/services/jwt"
+	"github.com/ncfex/dcart/auth-service/internal/core/services/password"
 	"github.com/ncfex/dcart/auth-service/internal/infrastructure/config"
 )
 
@@ -46,8 +48,8 @@ func main() {
 		log.Fatalf("Failed to initialize token repository: %v", err)
 	}
 
-	passwordService := auth.NewPasswordService(0)
-	jwtService := auth.NewJWTService("dcart", cfg.JwtSecret)
+	passwordService := password.NewPasswordService(0)
+	jwtService := jwt.NewJWTService("dcart", cfg.JwtSecret)
 	authService := auth.NewAuthService(userRepo, tokenRepo, passwordService, jwtService)
 
 	logger := log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
