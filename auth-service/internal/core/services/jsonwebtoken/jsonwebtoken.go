@@ -1,11 +1,18 @@
-package jwt
+package jsonwebtoken
 
 import (
+	"errors"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/ncfex/dcart/auth-service/internal/domain/errors"
+)
+
+var (
+	ErrTokenExpired  = errors.New("token expired")
+	ErrInvalidToken  = errors.New("invalid token")
+	ErrInvalidIssuer = errors.New("invalid issuer")
+	ErrInvalidUserID = errors.New("invalid user ID")
 )
 
 type JWTService struct {
@@ -33,8 +40,6 @@ func (s *JWTService) MakeJWT(userID uuid.UUID, expiresIn time.Duration) (string,
 }
 
 func (s *JWTService) ValidateJWT(tokenString string) (uuid.UUID, error) {
-	// check issuer
-	// add more checks
 	claims := jwt.RegisteredClaims{}
 	token, err := jwt.ParseWithClaims(
 		tokenString,
@@ -42,21 +47,26 @@ func (s *JWTService) ValidateJWT(tokenString string) (uuid.UUID, error) {
 		func(t *jwt.Token) (interface{}, error) { return []byte(s.tokenSecret), nil },
 	)
 	if err != nil {
-		return uuid.UUID{}, err
-	}
-
-	if claims.ExpiresAt.Before(time.Now()) {
-		return uuid.UUID{}, errors.ErrTokenExpired
+		return uuid.Nil, err
 	}
 
 	userIDString, err := token.Claims.GetSubject()
 	if err != nil {
-		return uuid.UUID{}, err
+		return uuid.Nil, err
+	}
+
+	issuer, err := token.Claims.GetIssuer()
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	if issuer != string(s.issuer) {
+		return uuid.Nil, ErrInvalidIssuer
 	}
 
 	userID, err := uuid.Parse(userIDString)
 	if err != nil {
-		return uuid.UUID{}, err
+		return uuid.Nil, ErrInvalidUserID
 	}
 	return userID, nil
 }
