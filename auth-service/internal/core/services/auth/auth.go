@@ -5,30 +5,28 @@ import (
 	"time"
 
 	"github.com/ncfex/dcart/auth-service/internal/core/ports"
-	"github.com/ncfex/dcart/auth-service/internal/core/services/jsonwebtoken"
-	"github.com/ncfex/dcart/auth-service/internal/core/services/password"
 	"github.com/ncfex/dcart/auth-service/internal/domain"
 	"github.com/ncfex/dcart/auth-service/internal/domain/errors"
 )
 
 type service struct {
-	userRepo        ports.UserRepository
-	tokenRepo       ports.TokenRepository
-	passwordService *password.PasswordService
-	jwtService      *jsonwebtoken.JWTService
+	userRepo          ports.UserRepository
+	tokenRepo         ports.TokenRepository
+	passwordEncrypter ports.PasswordEncrypter
+	tokenManager      ports.TokenManager
 }
 
 func NewAuthService(
 	userRepo ports.UserRepository,
 	tokenRepo ports.TokenRepository,
-	passwordService *password.PasswordService,
-	jwtService *jsonwebtoken.JWTService,
-) ports.Authenticator {
+	passwordEncrypter ports.PasswordEncrypter,
+	tokenManager ports.TokenManager,
+) ports.UserAuthenticator {
 	return &service{
-		userRepo:        userRepo,
-		tokenRepo:       tokenRepo,
-		passwordService: passwordService,
-		jwtService:      jwtService,
+		userRepo:          userRepo,
+		tokenRepo:         tokenRepo,
+		passwordEncrypter: passwordEncrypter,
+		tokenManager:      tokenManager,
 	}
 }
 
@@ -40,7 +38,7 @@ func (s *service) Register(ctx context.Context, username, password string) (*dom
 		return &domain.User{}, errors.ErrInvalidCredentials
 	}
 
-	hashedPassword, err := s.passwordService.HashPassword(password)
+	hashedPassword, err := s.passwordEncrypter.Hash(password)
 	if err != nil {
 		return &domain.User{}, domain.ErrUserAlreadyExists
 	}
@@ -62,13 +60,13 @@ func (s *service) Login(ctx context.Context, username, password string) (string,
 		return "", domain.ErrInvalidCredentials
 	}
 
-	err = s.passwordService.CheckPasswordHash(password, user.PasswordHash)
+	err = s.passwordEncrypter.Compare(user.PasswordHash, password)
 	if err != nil {
 		return "", domain.ErrInvalidCredentials
 	}
 
 	// TODO - use JWT
-	token, err := s.jwtService.MakeJWT(user.ID, time.Hour*24)
+	token, err := s.tokenManager.Make(user.ID, time.Hour*24)
 	if err != nil {
 		return "", err
 	}
