@@ -1,6 +1,7 @@
 package redis
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -35,30 +36,48 @@ func NewTokenRepository(redisURL string) (ports.TokenRepository, error) {
 	return &repository{pool: pool}, nil
 }
 
-func (r *repository) StoreToken(userID uuid.UUID, token string) error {
-	conn := r.pool.Get()
+func (r *repository) StoreToken(ctx context.Context, userID *uuid.UUID, token string) error {
+	conn, err := r.getConnWithContext(ctx)
+	if err != nil {
+		return err
+	}
 	defer conn.Close()
 
-	_, err := conn.Do("SETEX", token, 86400, userID.String()) // ttl 24h
+	_, err = conn.Do("SETEX", token, 86400, userID.String()) // ttl 24h
 	return err
 }
 
-func (r *repository) ValidateToken(token string) (uuid.UUID, error) {
-	conn := r.pool.Get()
+func (r *repository) ValidateToken(ctx context.Context, token string) (*uuid.UUID, error) {
+	conn, err := r.getConnWithContext(ctx)
+	if err != nil {
+		return nil, err
+	}
 	defer conn.Close()
 
 	userIDStr, err := redis.String(conn.Do("GET", token))
 	if errors.Is(err, redis.ErrNil) {
-		return uuid.UUID{}, nil // token not found
+		return nil, nil // token not found
 	}
 	if err != nil {
-		return uuid.UUID{}, err
+		return nil, err
 	}
 
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		return uuid.UUID{}, fmt.Errorf("invalid UUID format: %v", err)
+		return nil, fmt.Errorf("invalid UUID format: %v", err)
 	}
 
-	return userID, nil
+	return &userID, nil
+}
+
+func (r *repository) getConnWithContext(ctx context.Context) (redis.Conn, error) {
+	conn := r.pool.Get()
+
+	select {
+	case <-ctx.Done():
+		conn.Close()
+		return nil, ctx.Err()
+	default:
+		return conn, nil
+	}
 }

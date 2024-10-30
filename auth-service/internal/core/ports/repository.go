@@ -1,16 +1,18 @@
 package ports
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 	"github.com/ncfex/dcart/auth-service/internal/domain"
 )
 
 type UserRepository interface {
-	FindByUsername(username string) (*domain.User, error)
-	Create(user *domain.User) (*domain.User, error)
+	FindByUsername(ctx context.Context, username string) (*domain.User, error)
+	Create(ctx context.Context, user *domain.User) (*domain.User, error)
 }
 
 type TokenRepository interface {
-	StoreToken(userID uuid.UUID, token string) error
-	ValidateToken(token string) (uuid.UUID, error)
+	StoreToken(ctx context.Context, userID *uuid.UUID, token string) error
+	ValidateToken(ctx context.Context, token string) (*uuid.UUID, error)
 }

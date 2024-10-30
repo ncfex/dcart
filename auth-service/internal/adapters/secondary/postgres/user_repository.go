@@ -33,21 +33,21 @@ func NewUserRepository(dsn string) (ports.UserRepository, error) {
 	}, nil
 }
 
-func (r *repository) FindByUsername(username string) (*domain.User, error) {
-	dbUser, err := r.db.GetUserByUsername(context.Background(), username)
+func (r *repository) FindByUsername(ctx context.Context, username string) (*domain.User, error) {
+	dbUser, err := r.db.GetUserByUsername(ctx, username)
 	if err != nil {
 		return nil, err
 	}
 	return domain.NewUserFromDB(&dbUser), nil
 }
 
-func (r *repository) Create(user *domain.User) (*domain.User, error) {
+func (r *repository) Create(ctx context.Context, user *domain.User) (*domain.User, error) {
 	params := database.CreateUserParams{
 		Username:     user.Username,
 		PasswordHash: user.PasswordHash,
 	}
 
-	dbUser, err := r.db.CreateUser(context.Background(), params)
+	dbUser, err := r.db.CreateUser(ctx, params)
 	if err != nil {
 		return nil, err
 	}
