@@ -19,6 +19,6 @@ type PasswordEncrypter interface {
 }
 
 type TokenManager interface {
-	Make(userID uuid.UUID, expiresIn time.Duration) (string, error)
-	Validate(token string) (uuid.UUID, error)
+	Make(userID *uuid.UUID, expiresIn time.Duration) (string, error)
+	Validate(token string) (*uuid.UUID, error)
 }

@@ -28,7 +28,7 @@ func NewJWTService(issuer, tokenSecret string) ports.TokenManager {
 	}
 }
 
-func (s *service) Make(userID uuid.UUID, expiresIn time.Duration) (string, error) {
+func (s *service) Make(userID *uuid.UUID, expiresIn time.Duration) (string, error) {
 	currentTime := time.Now()
 	claims := jwt.RegisteredClaims{
 		Issuer:    s.issuer,
@@ -40,7 +40,7 @@ func (s *service) Make(userID uuid.UUID, expiresIn time.Duration) (string, error
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(s.tokenSecret))
 }
 
-func (s *service) Validate(tokenString string) (uuid.UUID, error) {
+func (s *service) Validate(tokenString string) (*uuid.UUID, error) {
 	claims := jwt.RegisteredClaims{}
 	token, err := jwt.ParseWithClaims(
 		tokenString,
@@ -48,26 +48,26 @@ func (s *service) Validate(tokenString string) (uuid.UUID, error) {
 		func(t *jwt.Token) (interface{}, error) { return []byte(s.tokenSecret), nil },
 	)
 	if err != nil {
-		return uuid.Nil, err
+		return nil, err
 	}
 
 	userIDString, err := token.Claims.GetSubject()
 	if err != nil {
-		return uuid.Nil, err
+		return nil, err
 	}
 
 	issuer, err := token.Claims.GetIssuer()
 	if err != nil {
-		return uuid.Nil, err
+		return nil, err
 	}
 
 	if issuer != string(s.issuer) {
-		return uuid.Nil, ErrInvalidIssuer
+		return nil, ErrInvalidIssuer
 	}
 
 	userID, err := uuid.Parse(userIDString)
 	if err != nil {
-		return uuid.Nil, ErrInvalidUserID
+		return nil, ErrInvalidUserID
 	}
-	return userID, nil
+	return &userID, nil
 }

@@ -34,7 +34,7 @@ func (s *service) Register(ctx context.Context, username, password string) (*dom
 	if username == "" || password == "" {
 		return &domain.User{}, errors.ErrInvalidCredentials
 	}
-	if _, err := s.userRepo.FindByUsername(username); err == nil {
+	if _, err := s.userRepo.FindByUsername(ctx, username); err == nil {
 		return &domain.User{}, errors.ErrInvalidCredentials
 	}
 
@@ -48,14 +48,14 @@ func (s *service) Register(ctx context.Context, username, password string) (*dom
 		PasswordHash: hashedPassword,
 	}
 
-	return s.userRepo.Create(user)
+	return s.userRepo.Create(ctx, user)
 }
 
 func (s *service) Login(ctx context.Context, username, password string) (string, error) {
 	if username == "" || password == "" {
 		return "", domain.ErrInvalidCredentials
 	}
-	user, err := s.userRepo.FindByUsername(username)
+	user, err := s.userRepo.FindByUsername(ctx, username)
 	if err != nil {
 		return "", domain.ErrInvalidCredentials
 	}
@@ -66,11 +66,11 @@ func (s *service) Login(ctx context.Context, username, password string) (string,
 	}
 
 	// TODO - use JWT
-	token, err := s.tokenManager.Make(user.ID, time.Hour*24)
+	token, err := s.tokenManager.Make(&user.ID, time.Hour*24)
 	if err != nil {
 		return "", err
 	}
-	err = s.tokenRepo.StoreToken(user.ID, token)
+	err = s.tokenRepo.StoreToken(ctx, &user.ID, token)
 	if err != nil {
 		return "", err
 	}
