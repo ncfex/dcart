@@ -2,60 +2,43 @@ package redis
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
-	"github.com/gomodule/redigo/redis"
 	"github.com/google/uuid"
 	"github.com/ncfex/dcart/auth-service/internal/core/ports"
+	"github.com/redis/go-redis/v9"
 )
 
 type repository struct {
-	pool *redis.Pool
+	client *redis.Client
 }
 
 func NewTokenRepository(redisURL string) (ports.TokenRepository, error) {
-	pool := &redis.Pool{
-		MaxIdle:   10,
-		MaxActive: 100,
-		Dial: func() (redis.Conn, error) {
-			return redis.Dial("tcp", redisURL)
-		},
-		IdleTimeout: 240 * time.Second,
+	opts, err := redis.ParseURL(redisURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse Redis URL: %w", err)
 	}
 
-	conn := pool.Get()
-	defer conn.Close()
+	client := redis.NewClient(opts)
 
-	_, err := conn.Do("PING")
-	if err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := client.Ping(ctx).Err(); err != nil {
 		return nil, fmt.Errorf("failed to connect to Redis: %w", err)
 	}
 
-	return &repository{pool: pool}, nil
+	return &repository{client: client}, nil
 }
 
 func (r *repository) StoreToken(ctx context.Context, userID *uuid.UUID, token string) error {
-	conn, err := r.getConnWithContext(ctx)
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-
-	_, err = conn.Do("SETEX", token, 86400, userID.String()) // ttl 24h
-	return err
+	return r.client.Set(ctx, token, userID.String(), 24*time.Hour).Err()
 }
 
 func (r *repository) ValidateToken(ctx context.Context, token string) (*uuid.UUID, error) {
-	conn, err := r.getConnWithContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
-
-	userIDStr, err := redis.String(conn.Do("GET", token))
-	if errors.Is(err, redis.ErrNil) {
+	userIDStr, err := r.client.Get(ctx, token).Result()
+	if err == redis.Nil {
 		return nil, nil // token not found
 	}
 	if err != nil {
@@ -68,16 +51,4 @@ func (r *repository) ValidateToken(ctx context.Context, token string) (*uuid.UUI
 	}
 
 	return &userID, nil
-}
-
-func (r *repository) getConnWithContext(ctx context.Context) (redis.Conn, error) {
-	conn := r.pool.Get()
-
-	select {
-	case <-ctx.Done():
-		conn.Close()
-		return nil, ctx.Err()
-	default:
-		return conn, nil
-	}
 }

@@ -32,7 +32,7 @@ func main() {
 	)
 
 	redisURL := fmt.Sprintf(
-		"%s:%s",
+		"redis://%s:%s",
 		cfg.RedisHost,
 		cfg.RedisPort,
 	)
