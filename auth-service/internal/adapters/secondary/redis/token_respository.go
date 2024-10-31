@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/ncfex/dcart/auth-service/internal/core/ports"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -14,7 +13,7 @@ type repository struct {
 	client *redis.Client
 }
 
-func NewTokenRepository(redisURL string) (ports.TokenRepository, error) {
+func NewTokenRepository(redisURL string) (*repository, error) {
 	opts, err := redis.ParseURL(redisURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse Redis URL: %w", err)
