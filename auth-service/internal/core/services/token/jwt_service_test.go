@@ -1,4 +1,4 @@
-package jsonwebtoken_test
+package token
 
 import (
 	"testing"
@@ -6,12 +6,11 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/ncfex/dcart/auth-service/internal/core/services/jsonwebtoken"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestJWTService_MakeJWT(t *testing.T) {
-	jwtService := jsonwebtoken.NewJWTService("test", "secret")
+	jwtService := NewJWTService("test", "secret")
 	userID := uuid.New()
 
 	tests := []struct {
@@ -54,7 +53,7 @@ func TestJWTService_MakeJWT(t *testing.T) {
 }
 
 func TestJWTService_ValidateJWT(t *testing.T) {
-	jwtService := jsonwebtoken.NewJWTService("test", "secret")
+	jwtService := NewJWTService("test", "secret")
 	userID := uuid.New()
 
 	tests := []struct {
@@ -95,7 +94,7 @@ func TestJWTService_ValidateJWT(t *testing.T) {
 		{
 			name: "token with wrong issuer",
 			setupToken: func() string {
-				wrongIssuerService := jsonwebtoken.NewJWTService("wrong-issuer", "secret")
+				wrongIssuerService := NewJWTService("wrong-issuer", "secret")
 				token, _ := wrongIssuerService.Make(&userID, time.Hour)
 				return token
 			},
