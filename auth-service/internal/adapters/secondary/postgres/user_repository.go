@@ -14,7 +14,7 @@ type userRepository struct {
 	queries *database.Queries
 }
 
-func NewUserRepository(db postgres.Database) ports.UserRepository {
+func NewUserRepository(db *postgres.Database) ports.UserRepository {
 	return &userRepository{
 		queries: database.New(db.DB),
 	}

@@ -5,11 +5,11 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	httpAdapter "github.com/ncfex/dcart/auth-service/internal/adapters/primary/http"
 	"github.com/ncfex/dcart/auth-service/internal/adapters/primary/http/response"
 	"github.com/ncfex/dcart/auth-service/internal/adapters/secondary/postgres"
-	"github.com/ncfex/dcart/auth-service/internal/adapters/secondary/redis"
 	"github.com/ncfex/dcart/auth-service/internal/core/services/authentication"
 	"github.com/ncfex/dcart/auth-service/internal/core/services/password"
 	"github.com/ncfex/dcart/auth-service/internal/core/services/token"
@@ -32,12 +32,6 @@ func main() {
 		cfg.PostgresDB,
 	)
 
-	redisURL := fmt.Sprintf(
-		"redis://%s:%s",
-		cfg.RedisHost,
-		cfg.RedisPort,
-	)
-
 	db, err := postgresDB.NewDatabase(postgresURL)
 	if err != nil {
 		log.Fatal(err)
@@ -45,8 +39,8 @@ func main() {
 	defer db.Close()
 
 	// repo
-	userRepo := postgres.NewUserRepository(*db)
-	tokenRepo, err := redis.NewTokenRepository(redisURL)
+	userRepo := postgres.NewUserRepository(db)
+	tokenRepo := postgres.NewTokenRepository(db, 24*7*time.Hour)
 	if err != nil {
 		log.Fatalf("Failed to initialize token repository: %v", err)
 	}
