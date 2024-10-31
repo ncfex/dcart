@@ -14,6 +14,7 @@ import (
 	"github.com/ncfex/dcart/auth-service/internal/core/services/password"
 	"github.com/ncfex/dcart/auth-service/internal/core/services/token"
 	"github.com/ncfex/dcart/auth-service/internal/infrastructure/config"
+	postgresDB "github.com/ncfex/dcart/auth-service/internal/infrastructure/database/postgres"
 )
 
 func main() {
@@ -37,12 +38,14 @@ func main() {
 		cfg.RedisPort,
 	)
 
-	// repo
-	userRepo, err := postgres.NewUserRepository(postgresURL)
+	db, err := postgresDB.NewDatabase(postgresURL)
 	if err != nil {
-		log.Fatalf("Failed to initialize user repository: %v", err)
+		log.Fatal(err)
 	}
+	defer db.Close()
 
+	// repo
+	userRepo := postgres.NewUserRepository(*db)
 	tokenRepo, err := redis.NewTokenRepository(redisURL)
 	if err != nil {
 		log.Fatalf("Failed to initialize token repository: %v", err)

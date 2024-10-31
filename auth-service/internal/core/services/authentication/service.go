@@ -34,7 +34,7 @@ func (s *service) Register(ctx context.Context, username, password string) (*dom
 	if username == "" || password == "" {
 		return &domain.User{}, errors.ErrInvalidCredentials
 	}
-	if _, err := s.userRepo.FindByUsername(ctx, username); err == nil {
+	if _, err := s.userRepo.GetUserByUsername(ctx, username); err == nil {
 		return &domain.User{}, errors.ErrInvalidCredentials
 	}
 
@@ -48,14 +48,14 @@ func (s *service) Register(ctx context.Context, username, password string) (*dom
 		PasswordHash: hashedPassword,
 	}
 
-	return s.userRepo.Create(ctx, user)
+	return s.userRepo.CreateUser(ctx, user)
 }
 
 func (s *service) Login(ctx context.Context, username, password string) (string, error) {
 	if username == "" || password == "" {
 		return "", domain.ErrInvalidCredentials
 	}
-	user, err := s.userRepo.FindByUsername(ctx, username)
+	user, err := s.userRepo.GetUserByUsername(ctx, username)
 	if err != nil {
 		return "", domain.ErrInvalidCredentials
 	}
