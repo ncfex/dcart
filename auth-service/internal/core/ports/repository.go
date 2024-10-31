@@ -16,4 +16,5 @@ type UserRepository interface {
 type TokenRepository interface {
 	StoreToken(ctx context.Context, userID *uuid.UUID, token string) error
 	ValidateToken(ctx context.Context, token string) (*uuid.UUID, error)
+	RevokeToken(ctx context.Context, token string) error
 }
