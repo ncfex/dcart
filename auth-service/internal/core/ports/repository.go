@@ -10,6 +10,7 @@ import (
 type UserRepository interface {
 	FindByUsername(ctx context.Context, username string) (*domain.User, error)
 	Create(ctx context.Context, user *domain.User) (*domain.User, error)
+	GetUserByID(ctx context.Context, userID *uuid.UUID) (*domain.User, error)
 }
 
 type TokenRepository interface {

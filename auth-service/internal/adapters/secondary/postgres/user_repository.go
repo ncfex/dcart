@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/ncfex/dcart/auth-service/internal/core/ports"
 	"github.com/ncfex/dcart/auth-service/internal/domain"
 	database "github.com/ncfex/dcart/auth-service/internal/infrastructure/database/sqlc"
@@ -51,5 +52,14 @@ func (r *repository) Create(ctx context.Context, user *domain.User) (*domain.Use
 	if err != nil {
 		return nil, err
 	}
+	return domain.NewUserFromDB(&dbUser), nil
+}
+
+func (r *repository) GetUserByID(ctx context.Context, userID *uuid.UUID) (*domain.User, error) {
+	dbUser, err := r.db.GetUserByID(ctx, *userID)
+	if err != nil {
+		return nil, err
+	}
+
 	return domain.NewUserFromDB(&dbUser), nil
 }
