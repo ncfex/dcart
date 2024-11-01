@@ -10,7 +10,7 @@ import (
 
 type UserAuthenticator interface {
 	Register(ctx context.Context, username string, password string) (*domain.User, error)
-	Login(ctx context.Context, username string, password string) (string, error)
+	Login(ctx context.Context, username string, password string) (*domain.TokenPair, error)
 	Logout(ctx context.Context, token string) error
 }
 
@@ -19,6 +19,7 @@ type PasswordEncrypter interface {
 	Compare(hashedPassword, password string) error
 }
 
+// TODO - more generic interface handle jwt,hex etc.
 type TokenManager interface {
 	Make(userID *uuid.UUID, expiresIn time.Duration) (string, error)
 	Validate(token string) (*uuid.UUID, error)

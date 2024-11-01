@@ -83,7 +83,8 @@ func (h *handler) login(w http.ResponseWriter, r *http.Request) {
 		Password string `json:"password"`
 	}
 	type response struct {
-		Token string `json:"token"`
+		Token        string `json:"token"`
+		RefreshToken string `json:"refresh_token"`
 	}
 
 	params := parameters{}
@@ -92,14 +93,15 @@ func (h *handler) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := h.userAuthenticator.Login(r.Context(), params.Username, params.Password)
+	tokenPair, err := h.userAuthenticator.Login(r.Context(), params.Username, params.Password)
 	if err != nil {
 		h.responder.RespondWithError(w, http.StatusUnauthorized, err.Error(), err)
 		return
 	}
 
 	h.responder.RespondWithJSON(w, http.StatusOK, response{
-		Token: token,
+		Token:        string(tokenPair.AccessToken),
+		RefreshToken: string(tokenPair.RefreshToken),
 	})
 }
 

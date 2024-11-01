@@ -12,6 +12,7 @@ import (
 	"github.com/ncfex/dcart/auth-service/internal/adapters/secondary/postgres"
 	"github.com/ncfex/dcart/auth-service/internal/core/services/authentication"
 	"github.com/ncfex/dcart/auth-service/internal/core/services/password"
+	"github.com/ncfex/dcart/auth-service/internal/core/services/refresh"
 	"github.com/ncfex/dcart/auth-service/internal/core/services/token"
 	"github.com/ncfex/dcart/auth-service/internal/infrastructure/config"
 	postgresDB "github.com/ncfex/dcart/auth-service/internal/infrastructure/database/postgres"
@@ -47,7 +48,14 @@ func main() {
 
 	passwordService := password.NewPasswordService(0)
 	jwtService := token.NewJWTService("dcart", cfg.JwtSecret)
-	authService := authentication.NewAuthService(userRepo, tokenRepo, passwordService, jwtService)
+	hexTokenService := refresh.NewHexTokenService("dc_", 32)
+	authService := authentication.NewAuthService(
+		userRepo,
+		tokenRepo,
+		passwordService,
+		jwtService,
+		hexTokenService,
+	)
 
 	logger := log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
 	responder := response.NewHTTPResponder(logger)

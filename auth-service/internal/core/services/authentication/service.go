@@ -6,28 +6,32 @@ import (
 	"time"
 
 	"github.com/ncfex/dcart/auth-service/internal/core/ports"
+	"github.com/ncfex/dcart/auth-service/internal/core/services/refresh"
 	"github.com/ncfex/dcart/auth-service/internal/domain"
 	"github.com/ncfex/dcart/auth-service/internal/domain/errors"
 )
 
 type service struct {
-	userRepo          ports.UserRepository
-	tokenRepo         ports.TokenRepository
-	passwordEncrypter ports.PasswordEncrypter
-	tokenManager      ports.TokenManager
+	userRepo            ports.UserRepository
+	tokenRepo           ports.TokenRepository
+	passwordEncrypter   ports.PasswordEncrypter
+	accessTokenManager  ports.TokenManager
+	refreshTokenManager refresh.HexTokenService
 }
 
 func NewAuthService(
 	userRepo ports.UserRepository,
 	tokenRepo ports.TokenRepository,
 	passwordEncrypter ports.PasswordEncrypter,
-	tokenManager ports.TokenManager,
+	accessTokenManager ports.TokenManager,
+	refreshTokenManager refresh.HexTokenService,
 ) ports.UserAuthenticator {
 	return &service{
-		userRepo:          userRepo,
-		tokenRepo:         tokenRepo,
-		passwordEncrypter: passwordEncrypter,
-		tokenManager:      tokenManager,
+		userRepo:            userRepo,
+		tokenRepo:           tokenRepo,
+		passwordEncrypter:   passwordEncrypter,
+		accessTokenManager:  accessTokenManager,
+		refreshTokenManager: refreshTokenManager,
 	}
 }
 
@@ -52,31 +56,39 @@ func (s *service) Register(ctx context.Context, username, password string) (*dom
 	return s.userRepo.CreateUser(ctx, user)
 }
 
-func (s *service) Login(ctx context.Context, username, password string) (string, error) {
+func (s *service) Login(ctx context.Context, username, password string) (*domain.TokenPair, error) {
 	if username == "" || password == "" {
-		return "", domain.ErrInvalidCredentials
+		return nil, domain.ErrInvalidCredentials
 	}
 	user, err := s.userRepo.GetUserByUsername(ctx, username)
 	if err != nil {
-		return "", domain.ErrInvalidCredentials
+		return nil, domain.ErrInvalidCredentials
 	}
 
 	err = s.passwordEncrypter.Compare(user.PasswordHash, password)
 	if err != nil {
-		return "", domain.ErrInvalidCredentials
+		return nil, domain.ErrInvalidCredentials
 	}
 
-	// TODO - use JWT
-	token, err := s.tokenManager.Make(&user.ID, time.Hour*24)
+	accessToken, err := s.accessTokenManager.Make(&user.ID, time.Minute*15)
 	if err != nil {
-		return "", err
-	}
-	err = s.tokenRepo.StoreToken(ctx, &user.ID, token)
-	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return token, nil
+	refreshToken, err := s.refreshTokenManager.Make()
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.tokenRepo.StoreToken(ctx, &user.ID, refreshToken)
+	if err != nil {
+		return nil, err
+	}
+
+	return &domain.TokenPair{
+		AccessToken:  domain.Token(accessToken),
+		RefreshToken: domain.Token(refreshToken),
+	}, nil
 }
 
 func (s *service) Logout(ctx context.Context, token string) error {
