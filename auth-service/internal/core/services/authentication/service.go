@@ -2,6 +2,7 @@ package authentication
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/ncfex/dcart/auth-service/internal/core/ports"
@@ -76,4 +77,17 @@ func (s *service) Login(ctx context.Context, username, password string) (string,
 	}
 
 	return token, nil
+}
+
+func (s *service) Logout(ctx context.Context, token string) error {
+	if token == "" {
+		return errors.ErrInvalidToken
+	}
+
+	err := s.tokenRepo.RevokeToken(ctx, token)
+	if err != nil {
+		return fmt.Errorf("error revoking token")
+	}
+
+	return nil
 }

@@ -11,6 +11,7 @@ import (
 type UserAuthenticator interface {
 	Register(ctx context.Context, username string, password string) (*domain.User, error)
 	Login(ctx context.Context, username string, password string) (string, error)
+	Logout(ctx context.Context, token string) error
 }
 
 type PasswordEncrypter interface {
