@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/ncfex/dcart/auth-service/internal/adapters/primary/http/middleware"
 	"github.com/ncfex/dcart/auth-service/internal/adapters/primary/http/request"
 	"github.com/ncfex/dcart/auth-service/internal/adapters/primary/http/response"
 	"github.com/ncfex/dcart/auth-service/internal/core/ports"
@@ -24,9 +25,23 @@ func NewHandler(responder response.Responder, userAuthenticator ports.UserAuthen
 
 func (h *handler) Router() *http.ServeMux {
 	mux := http.NewServeMux()
-	mux.HandleFunc("POST /register", h.register)
-	mux.HandleFunc("POST /login", h.login)
-	mux.HandleFunc("POST /logout", h.logout)
+
+	publicChain := middleware.NewChain(
+		middleware.Logger(),
+	)
+
+	protectedChain := middleware.NewChain(
+		middleware.Logger(),
+		// todo add auth middleware
+	)
+
+	// public
+	mux.Handle("POST /register", publicChain.ThenFunc(h.register))
+	mux.Handle("POST /login", publicChain.ThenFunc(h.login))
+
+	// protected
+	mux.Handle("POST /logout", protectedChain.ThenFunc(h.logout))
+
 	return mux
 }
 
