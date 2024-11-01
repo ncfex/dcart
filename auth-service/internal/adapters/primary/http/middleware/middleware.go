@@ -1,24 +1,36 @@
 package middleware
 
 import (
-	"fmt"
 	"net/http"
 )
 
-type Middleware func(http.HandlerFunc) http.HandlerFunc
+type Middleware func(http.Handler) http.Handler
 
-func Chain(h http.HandlerFunc, middlewares ...Middleware) http.HandlerFunc {
-	for _, m := range middlewares {
-		h = m(h)
+type chain struct {
+	middlewares []Middleware
+}
+
+func NewChain(middlewares ...Middleware) *chain {
+	return &chain{
+		middlewares: append([]Middleware{}, middlewares...),
 	}
+}
+
+func (c *chain) Then(h http.Handler) http.Handler {
+	if h == nil {
+		h = http.DefaultServeMux
+	}
+
+	for i := len(c.middlewares) - 1; i >= 0; i-- {
+		h = c.middlewares[i](h)
+	}
+
 	return h
 }
 
-func Logger(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		userAgent := r.Header.Get("User-Agent")
-		method := r.Method
-		fmt.Printf("Testing logging middleware:\nMethod:%s\nUser-Agent:%s\n\n", method, userAgent)
-		next.ServeHTTP(w, r)
+func (c *chain) ThenFunc(fn http.HandlerFunc) http.Handler {
+	if fn == nil {
+		return c.Then(nil)
 	}
+	return c.Then(fn)
 }
