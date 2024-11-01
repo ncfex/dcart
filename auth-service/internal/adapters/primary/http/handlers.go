@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/ncfex/dcart/auth-service/internal/adapters/primary/http/request"
 	"github.com/ncfex/dcart/auth-service/internal/adapters/primary/http/response"
 	"github.com/ncfex/dcart/auth-service/internal/core/ports"
 	"github.com/ncfex/dcart/auth-service/internal/domain"
@@ -25,6 +26,7 @@ func (h *handler) Router() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /register", h.register)
 	mux.HandleFunc("POST /login", h.login)
+	mux.HandleFunc("POST /logout", h.logout)
 	return mux
 }
 
@@ -84,4 +86,20 @@ func (h *handler) login(w http.ResponseWriter, r *http.Request) {
 	h.responder.RespondWithJSON(w, http.StatusOK, response{
 		Token: token,
 	})
+}
+
+func (h *handler) logout(w http.ResponseWriter, r *http.Request) {
+	accessToken, err := request.GetBearerToken(r.Header)
+	if err != nil {
+		h.responder.RespondWithError(w, http.StatusUnauthorized, "not authorized", err)
+		return
+	}
+
+	err = h.userAuthenticator.Logout(r.Context(), accessToken)
+	if err != nil {
+		h.responder.RespondWithError(w, http.StatusInternalServerError, err.Error(), err)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
