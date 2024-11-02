@@ -6,8 +6,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/ncfex/dcart/auth-service/internal/core/ports"
+	"github.com/ncfex/dcart/auth-service/internal/domain"
 	"github.com/ncfex/dcart/auth-service/internal/infrastructure/database/postgres"
 	database "github.com/ncfex/dcart/auth-service/internal/infrastructure/database/sqlc"
 )
@@ -33,10 +33,10 @@ func NewTokenRepository(db *postgres.Database, expiresIn time.Duration) ports.To
 	}
 }
 
-func (r *tokenRepository) StoreToken(ctx context.Context, userID *uuid.UUID, token string) error {
+func (r *tokenRepository) StoreToken(ctx context.Context, user *domain.User, token string) error {
 	params := database.CreateRefreshTokenParams{
 		Token:     token,
-		UserID:    *userID,
+		UserID:    user.ID,
 		ExpiresAt: time.Now().Add(r.expiresIn),
 	}
 
@@ -48,7 +48,7 @@ func (r *tokenRepository) StoreToken(ctx context.Context, userID *uuid.UUID, tok
 	return nil
 }
 
-func (r *tokenRepository) ValidateToken(ctx context.Context, token string) (*uuid.UUID, error) {
+func (r *tokenRepository) GetUserFromToken(ctx context.Context, token string) (*domain.User, error) {
 	user, err := r.queries.GetUserFromRefreshToken(ctx, token)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -57,7 +57,7 @@ func (r *tokenRepository) ValidateToken(ctx context.Context, token string) (*uui
 		return nil, errors.Join(ErrValidatingToken, err)
 	}
 
-	return &user.ID, nil
+	return domain.NewUserFromDB(&user), nil
 }
 
 func (r *tokenRepository) RevokeToken(ctx context.Context, token string) error {
