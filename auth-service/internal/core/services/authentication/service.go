@@ -80,7 +80,7 @@ func (s *service) Login(ctx context.Context, username, password string) (*domain
 		return nil, err
 	}
 
-	err = s.tokenRepo.StoreToken(ctx, &user.ID, refreshToken)
+	err = s.tokenRepo.StoreToken(ctx, user, refreshToken)
 	if err != nil {
 		return nil, err
 	}
@@ -91,12 +91,45 @@ func (s *service) Login(ctx context.Context, username, password string) (*domain
 	}, nil
 }
 
+func (s *service) Refresh(ctx context.Context, token string) (*domain.TokenPair, error) {
+	if token == "" {
+		return nil, errors.ErrInvalidToken
+	}
+
+	ref, err := s.tokenRepo.GetTokenByTokenString(ctx, token)
+	if err != nil {
+		return nil, errors.ErrInvalidToken
+	}
+
+	fmt.Println(ref)
+
+	user, err := s.tokenRepo.GetUserFromToken(ctx, token)
+	if err != nil {
+		return nil, err
+	}
+
+	accessToken, err := s.accessTokenManager.Make(&user.ID, time.Minute*15)
+	if err != nil {
+		return nil, fmt.Errorf("error generating token")
+	}
+
+	return &domain.TokenPair{
+		AccessToken:  domain.Token(accessToken),
+		RefreshToken: domain.Token(token),
+	}, nil
+}
+
 func (s *service) Logout(ctx context.Context, token string) error {
 	if token == "" {
 		return errors.ErrInvalidToken
 	}
 
-	err := s.tokenRepo.RevokeToken(ctx, token)
+	_, err := s.tokenRepo.GetTokenByTokenString(ctx, token)
+	if err != nil {
+		return errors.ErrInvalidToken
+	}
+
+	err = s.tokenRepo.RevokeToken(ctx, token)
 	if err != nil {
 		return fmt.Errorf("error revoking token")
 	}

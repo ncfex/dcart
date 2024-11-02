@@ -40,6 +40,7 @@ func (h *handler) Router() *http.ServeMux {
 	mux.Handle("POST /login", publicChain.ThenFunc(h.login))
 
 	// protected
+	mux.Handle("POST /refresh", protectedChain.ThenFunc(h.refresh))
 	mux.Handle("POST /logout", protectedChain.ThenFunc(h.logout))
 
 	return mux
@@ -119,4 +120,26 @@ func (h *handler) logout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *handler) refresh(w http.ResponseWriter, r *http.Request) {
+	type response struct {
+		Token string `json:"token"`
+	}
+
+	refreshToken, err := request.GetBearerToken(r.Header)
+	if err != nil {
+		h.responder.RespondWithError(w, http.StatusUnauthorized, "not authorized", err)
+		return
+	}
+
+	tokenPair, err := h.userAuthenticator.Refresh(r.Context(), refreshToken)
+	if err != nil {
+		h.responder.RespondWithError(w, http.StatusUnauthorized, "not authorized", err)
+		return
+	}
+
+	h.responder.RespondWithJSON(w, http.StatusOK, response{
+		Token: string(tokenPair.AccessToken),
+	})
 }
