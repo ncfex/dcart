@@ -9,8 +9,8 @@ INSERT INTO users (
     gen_random_uuid(),
     $1,
     $2,
-    NOW(),
-    NOW()
+    NOW() AT TIME ZONE 'UTC',
+    NOW() AT TIME ZONE 'UTC'
 ) RETURNING *;
 
 -- name: GetUserByUsername :one

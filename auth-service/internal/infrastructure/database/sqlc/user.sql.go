@@ -22,8 +22,8 @@ INSERT INTO users (
     gen_random_uuid(),
     $1,
     $2,
-    NOW(),
-    NOW()
+    NOW() AT TIME ZONE 'UTC',
+    NOW() AT TIME ZONE 'UTC'
 ) RETURNING id, username, password_hash, created_at, updated_at
 `
 
