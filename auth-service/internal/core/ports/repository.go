@@ -15,6 +15,7 @@ type UserRepository interface {
 
 type TokenRepository interface {
 	StoreToken(ctx context.Context, user *domain.User, token string) error
+	GetTokenByTokenString(ctx context.Context, token string) (*domain.RefreshToken, error)
 	GetUserFromToken(ctx context.Context, token string) (*domain.User, error)
 	RevokeToken(ctx context.Context, token string) error
 }

@@ -48,6 +48,18 @@ func (r *tokenRepository) StoreToken(ctx context.Context, user *domain.User, tok
 	return nil
 }
 
+func (r *tokenRepository) GetTokenByTokenString(ctx context.Context, token string) (*domain.RefreshToken, error) {
+	refreshToken, err := r.queries.GetTokenByTokenString(ctx, token)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrTokenNotFound
+		}
+		return nil, err
+	}
+
+	return domain.NewRefreshTokenFromDB(&refreshToken), nil
+}
+
 func (r *tokenRepository) GetUserFromToken(ctx context.Context, token string) (*domain.User, error) {
 	user, err := r.queries.GetUserFromRefreshToken(ctx, token)
 	if err != nil {
