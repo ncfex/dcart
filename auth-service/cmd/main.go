@@ -59,7 +59,13 @@ func main() {
 
 	logger := log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
 	responder := response.NewHTTPResponder(logger)
-	handler := httpAdapter.NewHandler(responder, authService)
+	handler := httpAdapter.NewHandler(
+		responder,
+		authService,
+		jwtService,
+		tokenRepo,
+		userRepo,
+	)
 
 	srv := &http.Server{
 		Addr:    ":" + cfg.Port,

@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/ncfex/dcart/auth-service/internal/adapters/primary/http/middleware"
@@ -14,12 +15,24 @@ import (
 type handler struct {
 	responder         response.Responder
 	userAuthenticator ports.UserAuthenticator
+	tokenManager      ports.TokenManager
+	tokenRepo         ports.TokenRepository
+	userRepo          ports.UserRepository
 }
 
-func NewHandler(responder response.Responder, userAuthenticator ports.UserAuthenticator) *handler {
+func NewHandler(
+	responder response.Responder,
+	userAuthenticator ports.UserAuthenticator,
+	tokenManager ports.TokenManager,
+	tokenRepo ports.TokenRepository,
+	userRepo ports.UserRepository,
+) *handler {
 	return &handler{
 		userAuthenticator: userAuthenticator,
 		responder:         responder,
+		tokenManager:      tokenManager,
+		tokenRepo:         tokenRepo,
+		userRepo:          userRepo,
 	}
 }
 
@@ -30,9 +43,14 @@ func (h *handler) Router() *http.ServeMux {
 		middleware.Logger(),
 	)
 
-	protectedChain := middleware.NewChain(
+	refreshTokenRequiredChain := middleware.NewChain(
 		middleware.Logger(),
-		// todo add auth middleware
+		middleware.AuthenticateWithRefreshToken(h.tokenManager, h.tokenRepo, h.userRepo),
+	)
+
+	accessTokenProtectedChain := middleware.NewChain(
+		middleware.Logger(),
+		middleware.AuthenticateWithJWT(h.tokenManager, h.tokenRepo, h.userRepo),
 	)
 
 	// public
@@ -40,8 +58,11 @@ func (h *handler) Router() *http.ServeMux {
 	mux.Handle("POST /login", publicChain.ThenFunc(h.login))
 
 	// protected
-	mux.Handle("POST /refresh", protectedChain.ThenFunc(h.refresh))
-	mux.Handle("POST /logout", protectedChain.ThenFunc(h.logout))
+	mux.Handle("GET /profile", accessTokenProtectedChain.ThenFunc(h.profile))
+
+	// refresh required
+	mux.Handle("POST /refresh", refreshTokenRequiredChain.ThenFunc(h.refresh))
+	mux.Handle("POST /logout", refreshTokenRequiredChain.ThenFunc(h.logout))
 
 	return mux
 }
@@ -107,13 +128,13 @@ func (h *handler) login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) logout(w http.ResponseWriter, r *http.Request) {
-	accessToken, err := request.GetBearerToken(r.Header)
+	refreshToken, err := request.GetBearerToken(r.Header)
 	if err != nil {
 		h.responder.RespondWithError(w, http.StatusUnauthorized, "not authorized", err)
 		return
 	}
 
-	err = h.userAuthenticator.Logout(r.Context(), accessToken)
+	err = h.userAuthenticator.Logout(r.Context(), refreshToken)
 	if err != nil {
 		h.responder.RespondWithError(w, http.StatusInternalServerError, err.Error(), err)
 		return
@@ -141,5 +162,26 @@ func (h *handler) refresh(w http.ResponseWriter, r *http.Request) {
 
 	h.responder.RespondWithJSON(w, http.StatusOK, response{
 		Token: string(tokenPair.AccessToken),
+	})
+}
+
+func (h *handler) profile(w http.ResponseWriter, r *http.Request) {
+	type response struct {
+		User domain.User `json:"user"`
+	}
+
+	user, exists := request.GetUserFromContext(r.Context())
+	if !exists {
+		h.responder.RespondWithError(w, http.StatusNotFound, "no user found", errors.New("no user found"))
+		return
+	}
+
+	h.responder.RespondWithJSON(w, http.StatusOK, response{
+		User: domain.User{
+			ID:        user.ID,
+			Username:  user.Username,
+			CreatedAt: user.CreatedAt,
+			UpdatedAt: user.UpdatedAt,
+		},
 	})
 }
