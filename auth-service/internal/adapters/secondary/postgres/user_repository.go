@@ -2,12 +2,18 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 
 	"github.com/google/uuid"
 	"github.com/ncfex/dcart/auth-service/internal/core/ports"
 	"github.com/ncfex/dcart/auth-service/internal/domain"
 	"github.com/ncfex/dcart/auth-service/internal/infrastructure/database/postgres"
 	database "github.com/ncfex/dcart/auth-service/internal/infrastructure/database/sqlc"
+)
+
+var (
+	ErrUserNotFound = errors.New("user not found")
 )
 
 type userRepository struct {
@@ -36,6 +42,9 @@ func (r *userRepository) CreateUser(ctx context.Context, user *domain.User) (*do
 func (r *userRepository) GetUserByID(ctx context.Context, userID *uuid.UUID) (*domain.User, error) {
 	dbUser, err := r.queries.GetUserByID(ctx, *userID)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrUserNotFound
+		}
 		return nil, err
 	}
 	return domain.NewUserFromDB(&dbUser), nil
@@ -44,6 +53,9 @@ func (r *userRepository) GetUserByID(ctx context.Context, userID *uuid.UUID) (*d
 func (r *userRepository) GetUserByUsername(ctx context.Context, username string) (*domain.User, error) {
 	dbUser, err := r.queries.GetUserByUsername(ctx, username)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrUserNotFound
+		}
 		return nil, err
 	}
 	return domain.NewUserFromDB(&dbUser), nil
