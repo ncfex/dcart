@@ -40,15 +40,18 @@ func (h *handler) Router() *http.ServeMux {
 	mux := http.NewServeMux()
 
 	publicChain := middleware.NewChain(
+		middleware.Recovery(h.responder),
 		middleware.Logger(),
 	)
 
 	refreshTokenRequiredChain := middleware.NewChain(
+		middleware.Recovery(h.responder),
 		middleware.Logger(),
 		middleware.AuthenticateWithRefreshToken(h.tokenManager, h.tokenRepo, h.userRepo),
 	)
 
 	accessTokenProtectedChain := middleware.NewChain(
+		middleware.Recovery(h.responder),
 		middleware.Logger(),
 		middleware.AuthenticateWithJWT(h.tokenManager, h.tokenRepo, h.userRepo),
 	)
