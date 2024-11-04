@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	configPath := flag.String("config", "config/config.example.yaml", "path to config file")
+	configPath := flag.String("config", "internal/infrastructure/config/config.example.yaml", "path to config file")
 	flag.Parse()
 
 	logger := log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
