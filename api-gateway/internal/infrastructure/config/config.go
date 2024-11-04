@@ -2,29 +2,36 @@ package config
 
 import (
 	"os"
+	"time"
 
-	"github.com/joho/godotenv"
+	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
-	ApiGatewayPort string
-	AuthServiceURL string
+	Server   ServerConfig
+	Services []ServiceConfig
 }
 
-func LoadConfig() (*Config, error) {
-	err := godotenv.Load()
+type ServerConfig struct {
+	Port string `yaml:"port"`
+}
+
+type ServiceConfig struct {
+	Name    string        `yaml:"name"`
+	BaseURL string        `yaml:"baseURL"`
+	Timeout time.Duration `yaml:"timeout"`
+}
+
+func LoadConfig(path string) (*Config, error) {
+	data, err := os.ReadFile(path)
 	if err != nil {
-		return &Config{}, err
+		return nil, err
 	}
-	return &Config{
-		ApiGatewayPort: getEnv("API_GATEWAY_PORT", "8080"),
-		AuthServiceURL: getEnv("AUTH_SERVICE_URL", "http://auth-service:8080"),
-	}, nil
-}
 
-func getEnv(key, defaultValue string) string {
-	if value, exists := os.LookupEnv(key); exists {
-		return value
+	var config Config
+	if err := yaml.Unmarshal(data, &config); err != nil {
+		return nil, err
 	}
-	return defaultValue
+
+	return &config, nil
 }

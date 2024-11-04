@@ -1,0 +1,7 @@
+server:
+  port: "8080"
+
+services:
+  - name: auth
+    baseURL: http://auth-service:8080
+    timeout: 5s
