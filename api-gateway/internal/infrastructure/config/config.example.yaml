@@ -8,5 +8,5 @@ services:
     requiresAuth: false
 
 auth:
-  serviceURL: http://auth-service:8080
+  baseURL: http://auth-service:8080/validate
   timeout: 5s
