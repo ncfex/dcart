@@ -15,7 +15,7 @@ type serviceProxy struct {
 	handler http.Handler
 }
 
-func newServiceProxy(cfg *config.ServiceConfig) (*serviceProxy, error) {
+func newServiceProxy(cfg *config.ServiceConfig, router *Router) (*serviceProxy, error) {
 	target, err := url.Parse(cfg.BaseURL)
 	if err != nil {
 		return nil, err
@@ -23,10 +23,16 @@ func newServiceProxy(cfg *config.ServiceConfig) (*serviceProxy, error) {
 
 	proxy := httputil.NewSingleHostReverseProxy(target)
 
+	var handler http.Handler = proxy
+
+	if cfg.RequiresAuth {
+		handler = router.auth.Middleware(handler)
+	}
+
 	return &serviceProxy{
 		cfg:     cfg,
 		proxy:   proxy,
-		handler: http.Handler(proxy),
+		handler: handler,
 	}, nil
 }
 

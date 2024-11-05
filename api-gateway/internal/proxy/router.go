@@ -7,11 +7,13 @@ import (
 	"sync"
 
 	"github.com/ncfex/dcart/api-gateway/internal/infrastructure/config"
+	"github.com/ncfex/dcart/api-gateway/internal/middleware"
 )
 
 type Router struct {
 	cfg      *config.Config
 	services map[string]*serviceProxy
+	auth     *middleware.AuthMiddleware
 	mu       sync.RWMutex
 }
 
@@ -19,6 +21,7 @@ func NewRouter(cfg *config.Config) (*Router, error) {
 	r := &Router{
 		cfg:      cfg,
 		services: make(map[string]*serviceProxy),
+		auth:     middleware.NewAuthMiddleware(cfg.Auth),
 	}
 
 	if err := r.initializeServices(); err != nil {
@@ -56,7 +59,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 func (r *Router) initializeServices() error {
 	for _, svc := range r.cfg.Services {
-		proxy, err := newServiceProxy(&svc)
+		proxy, err := newServiceProxy(&svc, r)
 		if err != nil {
 			return fmt.Errorf("failed to initialize service %s: %w", svc.Name, err)
 		}
