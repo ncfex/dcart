@@ -5,3 +5,8 @@ services:
   - name: auth
     baseURL: http://auth-service:8080
     timeout: 5s
+    requiresAuth: false
+
+auth:
+  serviceURL: http://auth-service:8080
+  timeout: 5s
