@@ -6,15 +6,16 @@ import (
 	"time"
 )
 
-func Logger() Middleware {
+func Logging(logger *log.Logger) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
-			log.Printf("Started %s %s", r.Method, r.URL.Path)
+			ip := r.RemoteAddr
+			userAgent := r.UserAgent()
 
 			next.ServeHTTP(w, r)
 
-			log.Printf("Completed %s %s in %v", r.Method, r.URL.Path, time.Since(start))
+			logger.Printf("Completed %s %s from %s [%s] in %v", r.Method, r.URL.Path, ip, userAgent, time.Since(start))
 		})
 	}
 }
