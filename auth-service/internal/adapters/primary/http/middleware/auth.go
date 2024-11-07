@@ -7,14 +7,16 @@ import (
 	"time"
 
 	"github.com/ncfex/dcart/auth-service/internal/adapters/primary/http/request"
+	"github.com/ncfex/dcart/auth-service/internal/adapters/primary/http/response"
 	"github.com/ncfex/dcart/auth-service/internal/core/ports"
+	"github.com/ncfex/dcart/auth-service/internal/domain"
 )
 
-// TODO consider response.Responder
-func AuthenticateWithJWT(
+func RequireJWTAuth(
 	tokenManager ports.TokenManager,
 	tokenRepo ports.TokenRepository,
 	userRepo ports.UserRepository,
+	responder response.Responder,
 ) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -23,13 +25,13 @@ func AuthenticateWithJWT(
 
 			accessToken, err := request.GetBearerToken(r.Header)
 			if err != nil {
-				http.Error(w, "not authorized", http.StatusUnauthorized)
+				responder.RespondWithError(w, http.StatusUnauthorized, "Unauthorized: missing or invalid token", err)
 				return
 			}
 
 			userID, err := tokenManager.Validate(accessToken)
 			if err != nil {
-				http.Error(w, "not authorized", http.StatusUnauthorized)
+				responder.RespondWithError(w, http.StatusUnauthorized, "Unauthorized: invalid token", err)
 				return
 			}
 
@@ -37,25 +39,24 @@ func AuthenticateWithJWT(
 			if err != nil {
 				switch {
 				case errors.Is(err, context.DeadlineExceeded):
-					http.Error(w, "request timeout", http.StatusGatewayTimeout)
+					responder.RespondWithError(w, http.StatusGatewayTimeout, "Request timeout", err)
 				default:
-					http.Error(w, "not authorized", http.StatusUnauthorized)
+					responder.RespondWithError(w, http.StatusUnauthorized, "Unauthorized: user not found", err)
 				}
 				return
 			}
 
-			ctx = request.SetValueToContext(ctx, request.UserIDContextKey, userID)
-			ctx = request.SetValueToContext(ctx, request.UserContextKey, user)
-
+			ctx = context.WithValue(ctx, domain.ContextUserKey, user)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }
 
-func AuthenticateWithRefreshToken(
+func RequireRefreshToken(
 	tokenManager ports.TokenManager,
 	tokenRepo ports.TokenRepository,
 	userRepo ports.UserRepository,
+	responder response.Responder,
 ) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -64,7 +65,7 @@ func AuthenticateWithRefreshToken(
 
 			refreshToken, err := request.GetBearerToken(r.Header)
 			if err != nil {
-				http.Error(w, "not authorized", http.StatusUnauthorized)
+				responder.RespondWithError(w, http.StatusUnauthorized, "Unauthorized: missing or invalid refresh token", err)
 				return
 			}
 
@@ -72,16 +73,14 @@ func AuthenticateWithRefreshToken(
 			if err != nil {
 				switch {
 				case errors.Is(err, context.DeadlineExceeded):
-					http.Error(w, "request timeout", http.StatusGatewayTimeout)
+					responder.RespondWithError(w, http.StatusGatewayTimeout, "Request timeout", err)
 				default:
-					http.Error(w, "not authorized", http.StatusUnauthorized)
+					responder.RespondWithError(w, http.StatusUnauthorized, "Unauthorized: invalid refresh token", err)
 				}
 				return
 			}
 
-			ctx = request.SetValueToContext(ctx, request.UserIDContextKey, user.ID)
-			ctx = request.SetValueToContext(ctx, request.UserContextKey, user)
-
+			ctx = context.WithValue(ctx, domain.ContextUserKey, user)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
