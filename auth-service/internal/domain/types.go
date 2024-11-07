@@ -1,5 +1,5 @@
 package domain
 
-type contextKey string
+type ContextKey string
 
-const ContextUserKey contextKey = "user"
+const ContextUserKey ContextKey = "user"
