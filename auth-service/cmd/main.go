@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	httpAdapter "github.com/ncfex/dcart/auth-service/internal/adapters/primary/http"
+	"github.com/ncfex/dcart/auth-service/internal/adapters/primary/http/handlers"
 	"github.com/ncfex/dcart/auth-service/internal/adapters/primary/http/response"
 	"github.com/ncfex/dcart/auth-service/internal/adapters/secondary/postgres"
 	"github.com/ncfex/dcart/auth-service/internal/core/services/authentication"
@@ -59,7 +59,9 @@ func main() {
 
 	logger := log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
 	responder := response.NewHTTPResponder(logger)
-	handler := httpAdapter.NewHandler(
+
+	handler := handlers.NewHandler(
+		logger,
 		responder,
 		authService,
 		jwtService,
